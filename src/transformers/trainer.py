@@ -100,7 +100,7 @@ from .trainer_utils import (
 )
 from .training_args import ParallelMode, TrainingArguments
 from .utils import logging
-
+from itertools import cycle
 
 _is_native_amp_available = False
 
@@ -892,7 +892,7 @@ class Trainer:
             steps_in_epoch = len(epoch_iterator) if train_dataset_is_sized else self.args.max_steps
             self.control = self.callback_handler.on_epoch_begin(self.args, self.state, self.control)
 
-            for step, inputs in enumerate(epoch_iterator):
+            for step, inputs in cycle(enumerate(epoch_iterator)):
 
                 # Skip past any already trained steps if resuming training
                 if steps_trained_in_current_epoch > 0:
@@ -933,6 +933,8 @@ class Trainer:
                                 self.args.max_grad_norm,
                             )
 
+
+                    
                     # Optimizer step
                     if self.deepspeed:
                         self.deepspeed.step()
@@ -943,6 +945,24 @@ class Trainer:
                         self.scaler.update()
                     else:
                         self.optimizer.step()
+
+                    # for layer in range(12,-1,-1):
+                    #     if torch.isnan(model.state_dict()['module.deberta.encoder.layer.{0}.attention.self.in_proj.weight'.format(0)]).any():
+                    #         print("Layer weigts nan: ", layer)
+                    #     if torch.isnan(model.state_dict()['module.deberta.encoder.layer.{0}.attention.output.dense.bias'.format(0)]).any():
+                    #         print("Layer weigts nan: ", layer)
+                    #     if torch.isnan(model.state_dict()['module.deberta.encoder.layer.{0}.attention.output.LayerNorm.bias'.format(0)]).any():
+                    #         print("Layer weigts nan: ", layer)
+                    #     if torch.isnan(model.state_dict()['module.deberta.encoder.layer.{0}.intermediate.dense.bias'.format(0)]).any():
+                    #         print("Layer weigts nan: ", layer)
+                    #     if torch.isnan(model.state_dict()['module.deberta.encoder.layer.{0}.output.dense.bias'.format(0)]).any():
+                    #         print("Layer weigts nan: ", layer)
+                    #     if torch.isnan(model.state_dict()['module.deberta.encoder.layer.{0}.output.LayerNorm.bias'.format(0)]).any():
+                    #         print("Layer weigts nan: ", layer)
+
+                    # for p in model.parameters():
+                    #     print("Grad norm" , p.grad.norm())
+
 
                     self.lr_scheduler.step()
                     model.zero_grad()
@@ -1275,7 +1295,7 @@ class Trainer:
 
         if self.args.n_gpu > 1:
             loss = loss.mean()  # mean() to average on multi-gpu parallel training
-
+            print("Mean loss", loss)
         if self.args.gradient_accumulation_steps > 1:
             loss = loss / self.args.gradient_accumulation_steps
 
@@ -1306,7 +1326,8 @@ class Trainer:
         # TODO: this needs to be fixed and made cleaner later.
         if self.args.past_index >= 0:
             self._past = outputs[self.args.past_index]
-
+        # print("LOSS: ", outputs["loss"])
+        # print("outputs.keys(), labels", outputs.keys(), labels)
         if labels is not None:
             return self.label_smoother(outputs, labels)
         else:

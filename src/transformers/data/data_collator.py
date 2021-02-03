@@ -321,6 +321,8 @@ class DataCollatorForLanguageModeling:
     ) -> Dict[str, torch.Tensor]:
         # Handle dict or lists with proper padding and conversion to tensor.
         if isinstance(examples[0], (dict, BatchEncoding)):
+            if "input_ids" not in examples[0]:
+                print("Collator issue", examples)
             batch = self.tokenizer.pad(examples, return_tensors="pt")
         else:
             batch = {"input_ids": _collate_batch(examples, self.tokenizer)}
