@@ -1029,7 +1029,8 @@ class Trainer:
         self.control = self.callback_handler.on_train_end(self.args, self.state, self.control)
         # add remaining tr_loss
         self._total_loss_scalar += tr_loss.item()
-
+        print(" self._total_loss_scalar",  self._total_loss_scalar)
+        print(" self.state.global_stepr",  self.state.global_step)
         return TrainOutput(self.state.global_step, self._total_loss_scalar / self.state.global_step, metrics)
 
     def _maybe_log_save_evaluate(self, tr_loss, model, trial, epoch):
