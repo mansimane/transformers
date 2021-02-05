@@ -1330,13 +1330,17 @@ class Trainer:
         else:
             labels = None
         device = torch.device("cuda")
+        print("Device is :")
+        model = model.to(device)
         for key in inputs.keys():
             inputs[key] = inputs[key].to(device)
         if labels is not None:
             labels.to(device)
 
-        for p in model.parameters():
-            print("Before forward pass Device" , p.device())
+        # print(next(model.parameters()).de)
+        # for p in model.parameters():
+        #     print("Before forward pass Device" , p.
+        #           p.device())
         outputs = model(**inputs)
         # Save past state if it exists
         # TODO: this needs to be fixed and made cleaner later.
