@@ -565,9 +565,19 @@ class TrainingArguments:
         else:
             # Here, we'll use torch.distributed.
             # Initializes the distributed backend which will take care of synchronizing nodes/GPUs
-            torch.distributed.init_process_group(backend="nccl")
+            #torch.distributed.init_process_group(backend="nccl")
             device = torch.device("cuda", self.local_rank)
             self._n_gpu = 1
+
+        print(" self.local_rank ", self.local_rank)
+        if is_sagemaker_distributed_available():
+
+            print("is_sagemaker_distributed_available()")
+        if self.no_cuda:
+            print("self.no_cuda")
+
+        if torch.cuda.is_available():
+            print("torch.cuda.is_available()")
 
         if device.type == "cuda":
             torch.cuda.set_device(device)

@@ -918,7 +918,10 @@ class Trainer:
             self.control = self.callback_handler.on_epoch_begin(self.args, self.state, self.control)
 
             for step, inputs in enumerate(epoch_iterator):
-
+                #torch.cuda.set_device(smp.local_rank())
+                device = torch.device("cuda")
+                for key in inputs.keys():
+                    inputs[key] = inputs[key].to(device)
                 # Skip past any already trained steps if resuming training
                 if steps_trained_in_current_epoch > 0:
                     steps_trained_in_current_epoch -= 1
@@ -1326,6 +1329,11 @@ class Trainer:
             labels = inputs.pop("labels")
         else:
             labels = None
+        device = torch.device("cuda")
+        for key in inputs.keys():
+            inputs[key] = inputs[key].to(device)
+        if labels is not None:
+            labels.to(device)
         outputs = model(**inputs)
         # Save past state if it exists
         # TODO: this needs to be fixed and made cleaner later.
