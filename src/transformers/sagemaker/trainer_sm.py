@@ -28,7 +28,7 @@ from ..trainer_pt_utils import (
 )
 from ..utils import logging
 from .training_args_sm import is_smdistributed_available
-
+import collections
 
 
 logger = logging.get_logger(__name__)
@@ -78,6 +78,10 @@ class SageMakerTrainer(Trainer):
 
     def _get_train_sampler(self):
         if self.is_model_parallel_enabled:
+            if isinstance(self.train_dataset, torch.utils.data.IterableDataset) or not isinstance(
+                    self.train_dataset, collections.abc.Sized
+            ):
+                return None
             if self.args.group_by_length:
                 return DistributedLengthGroupedSampler(
                     self.train_dataset, self.args.train_batch_size, num_replicas=smp.dp_size(), rank=smp.dp_rank()
