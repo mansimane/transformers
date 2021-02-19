@@ -83,6 +83,7 @@ class SageMakerTrainer(Trainer):
         machines) main process.
         """
         if self.is_model_parallel_enabled:
+            print("smp.rank() ", smp.rank(), "smp.local_rank() ", smp.local_rank(), "smp.mp_rank() ", smp.mp_rank()," smp.dp_rank()",  smp.dp_rank())
             return smp.rank() == 0 and smp.local_rank() == 0 and smp.mp_rank() == 0 and smp.dp_rank()
         else:
             return super.is_local_process_zero()
