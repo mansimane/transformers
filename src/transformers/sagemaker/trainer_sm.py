@@ -73,8 +73,8 @@ if is_smdistributed_available():
 
 class SageMakerTrainer(Trainer):
     def __init__(self, args=None, **kwargs):
-        super().__init__(args=args, **kwargs)
-        self.is_model_parallel_enabled = is_smdistributed_available() and self.args.mp_parameters != ""
+        self.is_model_parallel_enabled = is_smdistributed_available() and args.mp_parameters != ""
+        super().__init__(args=args, **kwargs)s
         self.state.is_local_process_zero = self.is_local_process_zero()
 
     def is_local_process_zero(self) -> bool:
