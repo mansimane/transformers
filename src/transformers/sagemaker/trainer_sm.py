@@ -75,6 +75,17 @@ class SageMakerTrainer(Trainer):
     def __init__(self, args=None, **kwargs):
         super().__init__(args=args, **kwargs)
         self.is_model_parallel_enabled = is_smdistributed_available() and self.args.mp_parameters != ""
+        self.state.is_local_process_zero = self.is_local_process_zero()
+
+    def is_local_process_zero(self) -> bool:
+        """
+        Whether or not this process is the local (e.g., on one machine if training in a distributed fashion on several
+        machines) main process.
+        """
+        if self.is_model_parallel_enabled():
+            return smp.rank() == 0 and smp.local_rank() == 0 and smp.mp_rank() == 0 and smp.dp_rank()
+        else:
+            return super.is_local_process_zero()
 
     def _get_train_sampler(self):
         if self.is_model_parallel_enabled:
