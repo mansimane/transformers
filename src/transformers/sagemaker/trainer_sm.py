@@ -84,9 +84,19 @@ class SageMakerTrainer(Trainer):
         """
         if self.is_model_parallel_enabled:
             print("smp.rank() ", smp.rank(), "smp.local_rank() ", smp.local_rank(), "smp.mp_rank() ", smp.mp_rank()," smp.dp_rank()",  smp.dp_rank())
-            return smp.rank() == 0 and smp.local_rank() == 0 and smp.mp_rank() == 0 and smp.dp_rank() == 0
+            return smp.local_rank() == 0
         else:
             return super.is_local_process_zero()
+
+    def is_world_process_zero(self) -> bool:
+        """
+        Whether or not this process is the global main process (when training in a distributed fashion on several
+        machines, this is only going to be :obj:`True` for one process).
+        """
+        if self.is_model_parallel_enabled:
+            return smp.rank() == 0 and smp.local_rank() == 0 and smp.mp_rank() == 0 and smp.dp_rank() == 0
+        else:
+            return super.is_world_process_zero()
 
     def _get_train_sampler(self):
         if self.is_model_parallel_enabled:
