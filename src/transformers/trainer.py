@@ -27,7 +27,7 @@ import time
 import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
-
+from itertools import cycle
 
 # Integrations must be imported before ML frameworks:
 from .integrations import (  # isort: split
@@ -935,7 +935,7 @@ class Trainer:
             )
             self.control = self.callback_handler.on_epoch_begin(self.args, self.state, self.control)
 
-            for step, inputs in enumerate(epoch_iterator):
+            for step, inputs in cycle(enumerate(epoch_iterator)):
 
                 # Skip past any already trained steps if resuming training
                 if steps_trained_in_current_epoch > 0:
