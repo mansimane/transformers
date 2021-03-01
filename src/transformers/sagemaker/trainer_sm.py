@@ -130,12 +130,14 @@ class SageMakerTrainer(Trainer):
             return super()._get_eval_sampler(eval_dataset)
 
     def _wrap_model(self, model, training=True):
+        print("Entered SM wrap model")
         if self.is_model_parallel_enabled:
             # Wrapping the base model twice in a DistributedModel will raise an error.
             if isinstance(self.model_wrapped, smp.model.DistributedModel):
                 return self.model_wrapped
             return smp.DistributedModel(model)
         else:
+            print("Calling super wrap model")
             return super()._wrap_model(model)
 
     def create_optimizer_and_scheduler(self, num_training_steps: int):
