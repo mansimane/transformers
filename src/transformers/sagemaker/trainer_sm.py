@@ -13,6 +13,8 @@
 # limitations under the License.
 
 from typing import Any, Dict, List, Optional, Tuple, Union
+import warnings
+import os
 
 import torch
 from torch import nn
@@ -25,10 +27,18 @@ from ..trainer_pt_utils import (
     SequentialDistributedSampler,
     nested_detach,
     nested_numpify,
+    reissue_pt_warnings,
+)
+from ..file_utils import (
+    WEIGHTS_NAME,
 )
 from ..utils import logging
 from .training_args_sm import is_smdistributed_available
 import collections
+from ..trainer_utils import (
+    PREFIX_CHECKPOINT_DIR
+)
+from ..modeling_utils import PreTrainedModel
 
 
 logger = logging.get_logger(__name__)
@@ -148,6 +158,80 @@ class SageMakerTrainer(Trainer):
             return nested_numpify(tensors)
         else:
             return super()._gather_and_numpify(tensors, name)
+
+    def _save(self, output_dir: Optional[str] = None):
+        output_dir = output_dir if output_dir is not None else self.args.output_dir
+        os.makedirs(output_dir, exist_ok=True)
+        logger.info("Saving model checkpoint to %s", output_dir)
+        # Save a trained model and configuration using `save_pretrained()`.
+        # They can then be reloaded using `from_pretrained()`
+        if not isinstance(self.model, PreTrainedModel):
+            logger.info("Trainer.model is not a `PreTrainedModel`, only saving its state dict.")
+            model_dict = self.model.local_state_dict() # save the partial model
+            smp.save(
+                model_dict,
+                os.path.join(output_dir, WEIGHTS_NAME),
+                partial=True,
+            )
+        else:
+            print("Only supporting not pretraining models")
+            exit(1)
+        # Good practice: save your training arguments together with the trained model
+        torch.save(self.args, os.path.join(output_dir, "training_args.bin"))
+
+
+    def save_model(self, output_dir: Optional[str] = None):
+        """
+        Will save the model, so you can reload it using :obj:`from_pretrained()`.
+
+        Will only save from the world_master process (unless in TPUs).
+        """
+
+        if self.is_model_parallel_enabled:
+            if smp.dp_rank() == 0:
+                self._save(output_dir)
+        else:
+            super.save_model()
+
+        # If on sagemaker and we are saving the main model (not a checkpoint so output_dir=None), save a copy to
+        # SM_MODEL_DIR for easy deployment.
+        if output_dir is None and os.getenv("SM_MODEL_DIR") is not None:
+            self.save_model(output_dir=os.getenv("SM_MODEL_DIR"))
+
+    def _save_checkpoint(self, model, trial, metrics=None):
+        # Save model checkpoint
+        # Does not have support for rotate_checkpoints method like main trainer
+        checkpoint_folder = f"{PREFIX_CHECKPOINT_DIR}-{self.state.global_step}"
+        output_dir = os.path.join(self.args.output_dir, checkpoint_folder)
+        self.save_model(output_dir)
+        if self.smp.dp_rank() == 0:
+            opt_dict = self.optimizer.state_dict()
+            smp.save(opt_dict,
+                     os.path.join(output_dir, "optimizer.pt"),
+                     partial=True)
+            if self.is_world_process_zero():
+                with warnings.catch_warnings(record=True) as caught_warnings:
+                    torch.save(self.lr_scheduler.state_dict(), os.path.join(output_dir, "scheduler.pt"))
+                reissue_pt_warnings(caught_warnings)
+
+        # Save the Trainer state
+        if self.is_world_process_zero():
+            self.state.save_to_json(os.path.join(output_dir, "trainer_state.json"))
+
+    def _load_optimizer_and_scheduler(self, checkpoint):
+        """If optimizer and scheduler states exist, load them."""
+        if checkpoint is None:
+            return
+
+        if os.path.isfile(os.path.join(checkpoint, "optimizer.pt")) and os.path.isfile(
+            os.path.join(checkpoint, "scheduler.pt")
+        ):
+            self.optimizer.load_state_dict(
+                smp.load(os.path.join(checkpoint, "optimizer.pt"), partial=True)
+            )
+            with warnings.catch_warnings(record=True) as caught_warnings:
+                self.lr_scheduler.load_state_dict(torch.load(os.path.join(checkpoint, "scheduler.pt")))
+            reissue_pt_warnings(caught_warnings)
 
     def prediction_step(
         self,
