@@ -176,7 +176,11 @@ class SageMakerTrainer(Trainer):
         else:
             ## TODO this needs to similar to save_pretrained in modelling_utils.py
             print("Saving pretrained model")
-            import pdb;pdb.set_trace()
+            print("Base classes", self.model.__bases__)
+            if isinstance(self.model, smp.model.DistributedModel):
+                print("Model is smp distributed model")
+
+            # import pdb;pdb.set_trace()
             model_dict = self.model.local_state_dict() # save the partial model
             smp.save(
                 model_dict,
