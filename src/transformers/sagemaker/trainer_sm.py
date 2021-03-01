@@ -174,7 +174,7 @@ class SageMakerTrainer(Trainer):
                 partial=True,
             )
         else:
-            print("Only supporting not pretraining models")
+            print("Only supporting non pretraining models")
             exit(1)
         # Good practice: save your training arguments together with the trained model
         torch.save(self.args, os.path.join(output_dir, "training_args.bin"))
@@ -204,7 +204,7 @@ class SageMakerTrainer(Trainer):
         checkpoint_folder = f"{PREFIX_CHECKPOINT_DIR}-{self.state.global_step}"
         output_dir = os.path.join(self.args.output_dir, checkpoint_folder)
         self.save_model(output_dir)
-        if self.smp.dp_rank() == 0:
+        if smp.dp_rank() == 0:
             opt_dict = self.optimizer.state_dict()
             smp.save(opt_dict,
                      os.path.join(output_dir, "optimizer.pt"),
