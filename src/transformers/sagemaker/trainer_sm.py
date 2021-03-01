@@ -176,6 +176,7 @@ class SageMakerTrainer(Trainer):
         else:
             ## TODO this needs to similar to save_pretrained in modelling_utils.py
             print("Saving pretrained model")
+            import pdb;pdb.set_trace()
             model_dict = self.model.local_state_dict() # save the partial model
             smp.save(
                 model_dict,
@@ -213,13 +214,15 @@ class SageMakerTrainer(Trainer):
         checkpoint_folder = f"{PREFIX_CHECKPOINT_DIR}-{self.state.global_step}"
         output_dir = os.path.join(self.args.output_dir, checkpoint_folder)
         self.save_model(output_dir)
-        print("Saving optimizer state")
+
         if smp.dp_rank() == 0:
+            print("Saving optimizer state")
             opt_dict = self.optimizer.state_dict()
             smp.save(opt_dict,
                      os.path.join(output_dir, "optimizer.pt"),
                      partial=True)
             if self.is_world_process_zero():
+                print("Saving Learning Rate state")
                 with warnings.catch_warnings(record=True) as caught_warnings:
                     torch.save(self.lr_scheduler.state_dict(), os.path.join(output_dir, "scheduler.pt"))
                 reissue_pt_warnings(caught_warnings)
