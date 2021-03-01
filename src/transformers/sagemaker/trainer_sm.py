@@ -167,6 +167,8 @@ class SageMakerTrainer(Trainer):
         logger.info("Saving model checkpoint to %s", output_dir)
         # Save a trained model and configuration using `save_pretrained()`.
         # They can then be reloaded using `from_pretrained()`
+        print("Self.model", self.model)
+        print("type(Self.model(", type(self.model))
         if not isinstance(self.model, PreTrainedModel):
             logger.info("Trainer.model is not a `PreTrainedModel`, only saving its state dict.")
             model_dict = self.model.local_state_dict() # save the partial model
