@@ -176,7 +176,7 @@ class SageMakerTrainer(Trainer):
         else:
             ## TODO this needs to similar to save_pretrained in modelling_utils.py
             print("Saving pretrained model")
-            print("Base classes", self.model.__bases__)
+            # print("Base classes", self.model.__bases__)
             if isinstance(self.model, smp.model.DistributedModel):
                 print("Model is smp distributed model")
 
@@ -230,7 +230,7 @@ class SageMakerTrainer(Trainer):
                 with warnings.catch_warnings(record=True) as caught_warnings:
                     torch.save(self.lr_scheduler.state_dict(), os.path.join(output_dir, "scheduler.pt"))
                 reissue_pt_warnings(caught_warnings)
-        print("Saved optimizer state")
+            print("Saved optimizer state")
         # Save the Trainer state
         if self.is_world_process_zero():
             print("Saving trainer  state")
