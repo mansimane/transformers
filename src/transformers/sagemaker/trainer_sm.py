@@ -171,7 +171,7 @@ class SageMakerTrainer(Trainer):
         print("type(Self.model(", type(self.model))
         if not isinstance(self.model, PreTrainedModel):
             logger.info("Trainer.model is not a `PreTrainedModel`, only saving its state dict.")
-            model_dict = self.model.local_state_dict() # save the partial model
+            model_dict = self.model_wrapped.local_state_dict() # save the partial model
             smp.save(
                 model_dict,
                 os.path.join(output_dir, WEIGHTS_NAME),
@@ -183,15 +183,16 @@ class SageMakerTrainer(Trainer):
             # print("Base classes", self.model.__bases__)
             if isinstance(self.model, smp.model.DistributedModel):
                 print("Model is smp distributed model")
-
+            if isinstance(self.model_wrapped, smp.model.DistributedModel):
+                print("model_wrapped is smp distributed model")
             # import pdb;pdb.set_trace()
-            model_dict = self.model.local_state_dict() # save the partial model
+            model_dict = self.model_wrapped.local_state_dict() # save the partial model
             smp.save(
                 model_dict,
                 os.path.join(output_dir, WEIGHTS_NAME),
                 partial=True,
             )
-
+            print("Done saving model_wrapped ")
             print("Only supporting non pretraining models")
         # Good practice: save your training arguments together with the trained model
         torch.save(self.args, os.path.join(output_dir, "training_args.bin"))
