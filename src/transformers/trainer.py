@@ -853,6 +853,10 @@ class Trainer:
             if self.place_model_on_device:
                 self.model = self.model.to(self.args.device)
             self.model_wrapped = self.model
+        def count_parameters(model):
+            return sum(p.numel() for p in model.parameters() if p.requires_grad)
+        import smdistributed.modelparallel.torch as smp
+        print(f"total parameter count for rank: {smp.rank()} is {count_parameters(self.model_wrapped)}")
 
         # Keeping track whether we can can len() on the dataset or not
         train_dataset_is_sized = isinstance(self.train_dataset, collections.abc.Sized)
@@ -896,7 +900,7 @@ class Trainer:
         self.state.is_hyper_param_search = trial is not None
 
         # Check if saved optimizer or scheduler states exist
-        self._load_optimizer_and_scheduler(resume_from_checkpoint)
+        #self._load_optimizer_and_scheduler(resume_from_checkpoint)
 
         model = self._wrap_model(self.model_wrapped)
 
@@ -906,6 +910,7 @@ class Trainer:
 
         if delay_optimizer_creation:
             self.create_optimizer_and_scheduler(num_training_steps=max_steps)
+        self._load_optimizer_and_scheduler(resume_from_checkpoint)
 
         # important: at this point:
         # self.model         is the Transformers Model
@@ -1269,7 +1274,7 @@ class Trainer:
                 self.lr_scheduler.load_state_dict(lr_scheduler_state)
             else:
                 self.optimizer.load_state_dict(
-                    torch.load(os.path.join(checkpoint, "optimizer.pt"), map_location=self.args.device)
+                    torch.load(os.path.join(checkpoint, "optimizer.pt"), map_location="cpu")
                 )
                 with warnings.catch_warnings(record=True) as caught_warnings:
                     self.lr_scheduler.load_state_dict(torch.load(os.path.join(checkpoint, "scheduler.pt")))
