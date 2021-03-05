@@ -31,6 +31,7 @@ from ..trainer_pt_utils import (
     nested_numpify,
     reissue_pt_warnings,
 )
+import collections
 from ..trainer_utils import PREFIX_CHECKPOINT_DIR
 from ..utils import logging
 from .training_args_sm import is_smdistributed_available
@@ -92,7 +93,11 @@ class SageMakerTrainer(Trainer):
             return super().is_world_process_zero()
 
     def _get_train_sampler(self):
+        
         if self.is_model_parallel_enabled:
+            if isinstance(self.train_dataset, torch.utils.data.IterableDataset) or not isinstance(
+            self.train_dataset, collections.abc.Sized):
+                return None
             if self.args.group_by_length:
                 return DistributedLengthGroupedSampler(
                     self.train_dataset, self.args.train_batch_size, num_replicas=smp.dp_size(), rank=smp.dp_rank()

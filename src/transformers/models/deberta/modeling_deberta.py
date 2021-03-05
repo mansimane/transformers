@@ -1111,7 +1111,8 @@ class DebertaForSequenceClassification(DebertaPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
 
-        num_labels = getattr(config, "num_labels", 2)
+        num_labels = 3 # getattr(config, "num_labels", 3)
+        print("**** num_labels inside model", num_labels)
         self.num_labels = num_labels
 
         self.deberta = DebertaModel(config)
