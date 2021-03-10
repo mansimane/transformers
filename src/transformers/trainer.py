@@ -41,6 +41,9 @@ from .integrations import (  # isort: split
     run_hp_search_ray,
     init_deepspeed,
 )
+import torch.cuda.profiler as profiler
+import pyprof
+pyprof.init()
 
 import numpy as np
 import torch
