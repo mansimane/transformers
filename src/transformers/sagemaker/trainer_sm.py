@@ -242,6 +242,7 @@ class SageMakerTrainer(Trainer):
         ignore_keys: Optional[List[str]] = None,
     ) -> Tuple[Optional[float], Optional[torch.Tensor], Optional[torch.Tensor]]:
         if self.is_model_parallel_enabled:
+            print("inputs: ", inputs )
             has_labels = all(inputs.get(k) is not None for k in self.label_names)
             inputs = self._prepare_inputs(inputs)
 

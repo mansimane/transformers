@@ -27,7 +27,7 @@ import time
 import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
-
+import smdistributed.modelparallel.torch as smp
 
 # Integrations must be imported before ML frameworks:
 from .integrations import (  # isort: split
@@ -1761,6 +1761,7 @@ class Trainer:
         elif self.args.local_rank != -1:
             world_size = dist.get_world_size()
         world_size = max(1, world_size)
+        world_size = smp.dp_size()
 
         eval_losses_gatherer = DistributedTensorGatherer(world_size, num_examples, make_multiple_of=batch_size)
         if not prediction_loss_only:
