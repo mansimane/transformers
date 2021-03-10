@@ -42,8 +42,8 @@ from .integrations import (  # isort: split
     init_deepspeed,
 )
 import torch.cuda.profiler as profiler
-import pyprof
-pyprof.init()
+# import pyprof
+# pyprof.init()
 
 import numpy as np
 import torch
@@ -939,7 +939,7 @@ class Trainer:
             self.control = self.callback_handler.on_epoch_begin(self.args, self.state, self.control)
 
             for step, inputs in cycle(enumerate(epoch_iterator)):
-
+                torch.cuda.nvtx.range_push('TRAIN_STEP_FULL')
                 # Skip past any already trained steps if resuming training
                 if steps_trained_in_current_epoch > 0:
                     steps_trained_in_current_epoch -= 1
@@ -947,7 +947,7 @@ class Trainer:
 
                 if (step + 1) % self.args.gradient_accumulation_steps == 0:
                     self.control = self.callback_handler.on_step_begin(self.args, self.state, self.control)
-
+                torch.cuda.nvtx.range_push('TRAINING_STEP')
                 if (
                     ((step + 1) % self.args.gradient_accumulation_steps != 0)
                     and self.args.local_rank != -1
@@ -958,7 +958,10 @@ class Trainer:
                         tr_loss += self.training_step(model, inputs)
                 else:
                     tr_loss += self.training_step(model, inputs)
+
+                torch.cuda.nvtx.range_pop()  # training_step
                 self._total_flos += self.floating_point_ops(inputs)
+
 
                 if (step + 1) % self.args.gradient_accumulation_steps == 0 or (
                     # last step in epoch but step is always smaller than gradient_accumulation_steps
@@ -966,6 +969,7 @@ class Trainer:
                     and (step + 1) == steps_in_epoch
                 ):
                     # Gradient clipping
+                    torch.cuda.nvtx.range_push(f'GRADIENT_CLIPPING')
                     if self.args.max_grad_norm is not None and self.args.max_grad_norm > 0 and not self.deepspeed:
                         # deepspeed does its own clipping
 
@@ -982,8 +986,9 @@ class Trainer:
                                 amp.master_params(self.optimizer) if self.use_apex else model.parameters(),
                                 self.args.max_grad_norm,
                             )
-
+                    torch.cuda.nvtx.range_pop()  # GRADIENT_CLIPPING
                     # Optimizer step
+                    torch.cuda.nvtx.range_push('OPTIMIZER_STEP')
                     if self.deepspeed:
                         self.deepspeed.step()
                     elif is_torch_tpu_available():
@@ -993,6 +998,7 @@ class Trainer:
                         self.scaler.update()
                     else:
                         self.optimizer.step()
+                    torch.cuda.nvtx.range_pop() #OPTIMIZER_STEP
 
                     self.lr_scheduler.step()
                     model.zero_grad()
@@ -1004,7 +1010,7 @@ class Trainer:
 
                 if self.control.should_epoch_stop or self.control.should_training_stop:
                     break
-
+                torch.cuda.nvtx.range_pop()  # TRAIN_STEP_FULL
             self.control = self.callback_handler.on_epoch_end(self.args, self.state, self.control)
             self._maybe_log_save_evaluate(tr_loss, model, trial, epoch)
 
