@@ -1329,8 +1329,11 @@ class Trainer:
         """
 
         model.train()
+        torch.cuda.nvtx.range_push(f'INPUTS_DEVICE_TRANSFER')
         inputs = self._prepare_inputs(inputs)
+        torch.cuda.nvtx.range_pop() #INPUTS_DEVICE_TRANSFER
 
+        torch.cuda.nvtx.range_push(f'FORWARD_PASS')
         if self.use_amp:
             with autocast():
                 loss = self.compute_loss(model, inputs)
@@ -1342,6 +1345,9 @@ class Trainer:
 
         if self.args.gradient_accumulation_steps > 1:
             loss = loss / self.args.gradient_accumulation_steps
+        torch.cuda.nvtx.range_pop()  # FORWARD_PASS
+
+        torch.cuda.nvtx.range_push(f'BACKWARD_PASS')
 
         if self.use_amp:
             self.scaler.scale(loss).backward()
@@ -1352,7 +1358,7 @@ class Trainer:
             self.deepspeed.backward(loss)
         else:
             loss.backward()
-
+        torch.cuda.nvtx.range_pop() #BACKWARD_PASS
         return loss.detach()
 
     def compute_loss(self, model, inputs, return_outputs=False):
