@@ -39,14 +39,23 @@ if is_smdistributed_available():
 
     @smp.step()
     def forward_backward(model, inputs, gradient_accumulation_steps=1):
+        torch.cuda.nvtx.range_push('FORWARD_1')
         outputs = model(**inputs)
         loss = outputs["loss"] if isinstance(outputs, dict) else outputs[0]
+
         loss = loss / gradient_accumulation_steps
+        torch.cuda.nvtx.range_pop()
+
+        torch.cuda.nvtx.range_push('BACKWARD_1')
         model.backward(loss)
+        torch.cuda.nvtx.range_pop()
+
         return loss
 
     @smp.step()
     def forward_only(model, inputs):
+        torch.cuda.nvtx.range_push('FORWARD_2')
+        torch.cuda.nvtx.range_pop()
         return model(**inputs)
 
     def smp_gather(tensor):
