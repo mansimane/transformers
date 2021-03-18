@@ -937,8 +937,10 @@ class Trainer:
                 else self.args.max_steps * self.args.gradient_accumulation_steps
             )
             self.control = self.callback_handler.on_epoch_begin(self.args, self.state, self.control)
+            torch.cuda.nvtx.range_push('DATA_LOAD')
 
             for step, inputs in cycle(enumerate(epoch_iterator)):
+                torch.cuda.nvtx.range_pop()
                 torch.cuda.nvtx.range_push('TRAIN_STEP_FULL')
                 # Skip past any already trained steps if resuming training
                 if steps_trained_in_current_epoch > 0:
@@ -1000,20 +1002,26 @@ class Trainer:
                         self.optimizer.step()
                     torch.cuda.nvtx.range_pop() #OPTIMIZER_STEP
 
+                    torch.cuda.nvtx.range_push('LR_SCHEDULER_STEP')
                     self.lr_scheduler.step()
+                    torch.cuda.nvtx.range_pop()  # LR_SCHEDULER_STEP
+
+                    torch.cuda.nvtx.range_push('CALLBACKS_STEP_END')
                     model.zero_grad()
                     self.state.global_step += 1
                     self.state.epoch = epoch + (step + 1) / steps_in_epoch
                     self.control = self.callback_handler.on_step_end(self.args, self.state, self.control)
 
                     self._maybe_log_save_evaluate(tr_loss, model, trial, epoch)
+                    torch.cuda.nvtx.range_pop()  # CALLBACK_STEP_END
 
                 if self.control.should_epoch_stop or self.control.should_training_stop:
                     break
                 torch.cuda.nvtx.range_pop()  # TRAIN_STEP_FULL
+                torch.cuda.nvtx.range_push('DATA_LOAD')
             self.control = self.callback_handler.on_epoch_end(self.args, self.state, self.control)
             self._maybe_log_save_evaluate(tr_loss, model, trial, epoch)
-
+            torch.cuda.nvtx.range_pop() #DATA_LOAD
             if self.args.tpu_metrics_debug or self.args.debug:
                 if is_torch_tpu_available():
                     # tpu-comment: Logging debug metrics for PyTorch/XLA (compile, execute times, ops, etc.)
