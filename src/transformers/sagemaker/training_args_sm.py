@@ -57,7 +57,7 @@ if is_sagemaker_model_parallel_available():
     import smdistributed.modelparallel.torch as smp
     cfg = {
         "microbatches": 1,
-        "placement_strategy": "spread",
+        "placement_strategy": "cluster",
         "pipeline": "interleaved",
         "optimize": "speed",
         "partitions": 2,
