@@ -594,7 +594,7 @@ class DataCollatorForPermutationLanguageModeling:
 
     tokenizer: PreTrainedTokenizerBase
     plm_probability: float = 1 / 6
-    max_span_length: int = 5  # maximum length of a span of masked tokens
+    max_span_length: int = 3  # maximum length of a span of masked tokens
 
     def __call__(
         self, examples: List[Union[List[int], torch.Tensor, Dict[str, torch.Tensor]]]
