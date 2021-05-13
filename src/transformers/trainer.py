@@ -1992,3 +1992,4 @@ class Trainer:
             return self.model.floating_point_ops(inputs)
         else:
             return 0
+
